@@ -1,57 +1,55 @@
 export class Game {
-  constructor(initialState) {
-    this.grid = initialState
-      ? JSON.parse(JSON.stringify(initialState))
-      : this.generateEmptyGrid();
+  constructor() {
+    this.restart();
+  }
+
+  restart() {
+    this.grid = Array(4)
+      .fill()
+      .map(() => Array(4).fill(0));
     this.score = 0;
     this.status = 'playing';
+    this.addRandomTile();
+    this.addRandomTile();
   }
 
-  generateEmptyGrid() {
-    return Array(4)
-      .fill(null)
-      .map(() => Array(4).fill(0));
-  }
+  addRandomTile() {
+    const emptyCells = [];
 
-  getState() {
-    return this.grid;
-  }
-  getScore() {
-    return this.score;
-  }
-  getStatus() {
-    return this.status;
-  }
-
-  slide(row) {
-    let filteredRow = row.filter((val) => val !== 0);
-
-    for (let i = 0; i < filteredRow.length - 1; i++) {
-      if (filteredRow[i] === filteredRow[i + 1]) {
-        filteredRow[i] = filteredRow[i] * 2;
-        this.score += filteredRow[i];
-        filteredRow[i + 1] = 0;
-        i++;
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (this.grid[r][c] === 0) {
+          emptyCells.push({ r, c });
+        }
       }
     }
-    filteredRow = filteredRow.filter((val) => val !== 0);
 
-    while (filteredRow.length < 4) {
-      filteredRow.push(0);
+    if (emptyCells.length > 0) {
+      const { r, c } =
+        emptyCells[Math.floor(Math.random() * emptyCells.length)];
+
+      this.grid[r][c] = Math.random() < 0.9 ? 2 : 4;
     }
-
-    return filteredRow;
   }
 
-  transpose(matrix) {
-    return matrix[0].map((_, colIndex) => matrix.map((row) => row[colIndex]));
+  // MÉTODO CRUCIAL: Retorna true se o tabuleiro mudou, false se não.
+  afterMove(previousState) {
+    if (previousState !== JSON.stringify(this.grid)) {
+      this.addRandomTile();
+      this.checkStatus();
+
+      return true; // Movimento válido
+    }
+
+    return false; // Movimento inválido (nada mudou)
   }
 
   moveLeft() {
     const previousState = JSON.stringify(this.grid);
 
     this.grid = this.grid.map((row) => this.slide(row));
-    this.afterMove(previousState);
+
+    return this.afterMove(previousState);
   }
 
   moveRight() {
@@ -62,7 +60,8 @@ export class Game {
 
       return this.slide(reversed).reverse();
     });
-    this.afterMove(previousState);
+
+    return this.afterMove(previousState);
   }
 
   moveUp() {
@@ -71,7 +70,8 @@ export class Game {
     this.grid = this.transpose(this.grid);
     this.grid = this.grid.map((row) => this.slide(row));
     this.grid = this.transpose(this.grid);
-    this.afterMove(previousState);
+
+    return this.afterMove(previousState);
   }
 
   moveDown() {
@@ -85,74 +85,73 @@ export class Game {
       return this.slide(reversed).reverse();
     });
     this.grid = this.transpose(this.grid);
-    this.afterMove(previousState);
+
+    return this.afterMove(previousState);
   }
 
-  afterMove(previousState) {
-    if (previousState !== JSON.stringify(this.grid)) {
-      this.addRandomTile();
-      this.checkStatus();
+  slide(row) {
+    const arr = row.filter((val) => val);
+
+    for (let i = 0; i < arr.length - 1; i++) {
+      if (arr[i] === arr[i + 1]) {
+        arr[i] *= 2;
+        this.score += arr[i];
+        arr.splice(i + 1, 1);
+      }
     }
-  }
 
-  addRandomTile() {
-    const emptyCells = [];
-
-    this.grid.forEach((row, r) => {
-      row.forEach((cell, c) => {
-        if (cell === 0) {
-          emptyCells.push({ r, c });
-        }
-      });
-    });
-
-    if (emptyCells.length > 0) {
-      const { r, c } =
-        emptyCells[Math.floor(Math.random() * emptyCells.length)];
-
-      this.grid[r][c] = Math.random() < 0.9 ? 2 : 4;
+    while (arr.length < 4) {
+      arr.push(0);
     }
+
+    return arr;
   }
 
-  canMove() {
+  transpose(grid) {
+    return grid[0].map((_, i) => grid.map((row) => row[i]));
+  }
+
+  checkStatus() {
+    // Verificar vitória (2048)
+    if (this.grid.flat().includes(2048)) {
+      this.status = 'won';
+
+      return;
+    }
+
+    // Verificar se ainda há espaços vazios
     if (this.grid.flat().includes(0)) {
-      return true;
+      this.status = 'playing';
+
+      return;
     }
 
+    // Verificar se há movimentos possíveis (fusões vizinhas)
     for (let r = 0; r < 4; r++) {
       for (let c = 0; c < 4; c++) {
-        const current = this.grid[r][c];
+        const val = this.grid[r][c];
 
-        if (c < 3 && current === this.grid[r][c + 1]) {
-          return true;
-        }
+        if (
+          (c < 3 && val === this.grid[r][c + 1]) ||
+          (r < 3 && val === this.grid[r + 1][c])
+        ) {
+          this.status = 'playing';
 
-        if (r < 3 && current === this.grid[r + 1][c]) {
-          return true;
+          return;
         }
       }
     }
 
-    return false;
+    this.status = 'lost';
   }
 
-  checkStatus() {
-    if (this.grid.flat().includes(2048)) {
-      this.status = 'won';
-    } else if (!this.canMove()) {
-      this.status = 'lost';
-    }
+  getState() {
+    return this.grid;
   }
-
-  start() {
-    this.addRandomTile();
-    this.addRandomTile();
+  getScore() {
+    return this.score;
   }
-
-  restart() {
-    this.grid = this.generateEmptyGrid();
-    this.score = 0;
-    this.status = 'playing';
-    this.start();
+  getStatus() {
+    return this.status;
   }
 }

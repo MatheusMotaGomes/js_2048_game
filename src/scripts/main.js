@@ -23,6 +23,7 @@ function updateUI() {
       const value = state[r][c];
       const cell = cells[cellIndex];
 
+      // CORREÇÃO DO MENTOR: Mantemos a classe base e limpamos as de valor
       cell.className = 'field-cell';
 
       if (value > 0) {
@@ -39,7 +40,6 @@ function updateUI() {
   if (gameStatus === 'won') {
     winMessage.classList.remove('hidden');
   } else if (gameStatus === 'lost') {
-    // CORRIGIDO: gameStatus em vez de status
     loseMessage.classList.remove('hidden');
   }
 }
@@ -51,34 +51,30 @@ document.addEventListener('keydown', (keyboardEvent) => {
 
   const keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
 
-  // CORRIGIDO: keyboardEvent em vez de event
   if (!keys.includes(keyboardEvent.key)) {
     return;
   }
 
+  // CORREÇÃO DO MENTOR: Capturamos se o movimento foi válido
+  let moved = false;
+
   if (keyboardEvent.key === 'ArrowLeft') {
-    game.moveLeft();
+    moved = game.moveLeft();
+  } else if (keyboardEvent.key === 'ArrowRight') {
+    moved = game.moveRight();
+  } else if (keyboardEvent.key === 'ArrowUp') {
+    moved = game.moveUp();
+  } else if (keyboardEvent.key === 'ArrowDown') {
+    moved = game.moveDown();
   }
 
-  if (keyboardEvent.key === 'ArrowRight') {
-    game.moveRight();
+  if (moved) {
+    startMessage.classList.add('hidden');
+    mainButton.textContent = 'Restart';
+    mainButton.classList.remove('start');
+    mainButton.classList.add('restart');
+    updateUI();
   }
-
-  if (keyboardEvent.key === 'ArrowUp') {
-    game.moveUp();
-  }
-
-  if (keyboardEvent.key === 'ArrowDown') {
-    game.moveDown();
-  }
-
-  // Esconder mensagem inicial e mudar botão no primeiro movimento
-  startMessage.classList.add('hidden');
-  mainButton.textContent = 'Restart';
-  mainButton.classList.remove('start');
-  mainButton.classList.add('restart');
-
-  updateUI();
 });
 
 mainButton.addEventListener('click', () => {
@@ -92,4 +88,5 @@ mainButton.addEventListener('click', () => {
   updateUI();
 });
 
+// Inicializar estado visual
 updateUI();
